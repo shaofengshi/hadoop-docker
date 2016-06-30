@@ -1,4 +1,4 @@
-# Creates a kylin 1.5.2 + hbase 0.98 + hive 0.14 + hadoop 2.7
+# Creates a kylin 1.5.2 + hbase 0.98 + hive 0.14 + hadoop 2.6
 
 FROM sequenceiq/pam:centos-6.5
 MAINTAINER Kyligence
@@ -28,13 +28,9 @@ ENV JAVA_HOME /usr/java/default
 ENV PATH $PATH:$JAVA_HOME/bin
 RUN rm /usr/bin/java && ln -s $JAVA_HOME/bin/java /usr/bin/java
 
-# download native support
-RUN mkdir -p /tmp/native
-RUN curl -L https://github.com/sequenceiq/docker-hadoop-build/releases/download/v2.7.1/hadoop-native-64-2.7.1.tgz | tar -xz -C /tmp/native
-
 # hadoop
-RUN curl -s http://www.eu.apache.org/dist/hadoop/common/hadoop-2.7.1/hadoop-2.7.1.tar.gz | tar -xz -C /usr/local/
-RUN cd /usr/local && ln -s ./hadoop-2.7.1 hadoop
+RUN curl -s http://www.eu.apache.org/dist/hadoop/common/hadoop-2.6.0/hadoop-2.6.0.tar.gz | tar -xz -C /usr/local/
+RUN cd /usr/local && ln -s ./hadoop-2.6.0 hadoop
 
 # hbase 0.98
 RUN curl -s https://www-us.apache.org/dist/hbase/0.98.20/hbase-0.98.20-hadoop2-bin.tar.gz | tar -xz -C /usr/local/
@@ -64,7 +60,7 @@ ENV HIVE_PREFIX /usr/local/hive
 ENV HIVE_CONF_DIR $HIVE_PREFIX/conf
 ENV KYLIN_HOME /usr/local/kylin
 
-ENV PATH $PATH:$HBASE_PREFIX/bin:$HIVE_PREFIX/bin:$KYLIN_HOME/bin
+ENV PATH $PATH:$HADOOP_PREFIX/bin:$HBASE_PREFIX/bin:$HIVE_PREFIX/bin:$KYLIN_HOME/bin
 
 RUN sed -i '/^export JAVA_HOME/ s:.*:export JAVA_HOME=/usr/java/default\nexport HADOOP_PREFIX=/usr/local/hadoop\nexport HADOOP_HOME=/usr/local/hadoop\n:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
 RUN sed -i '/^export HADOOP_CONF_DIR/ s:.*:export HADOOP_CONF_DIR=/usr/local/hadoop/etc/hadoop/:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
@@ -85,8 +81,8 @@ ADD hive-site.xml $HIVE_CONF_DIR/hive-site.xml
 ADD kylin.properties $KYLIN_HOME/conf/kylin.properties
 
 # fixing the libhadoop.so like a boss
-RUN rm -rf /usr/local/hadoop/lib/native
-RUN mv /tmp/native /usr/local/hadoop/lib
+RUN rm  /usr/local/hadoop/lib/native/*
+RUN curl -Ls http://dl.bintray.com/sequenceiq/sequenceiq-bin/hadoop-native-64-2.6.0.tar | tar -x -C /usr/local/hadoop/lib/native/
 
 ADD ssh_config /root/.ssh/config
 RUN chmod 600 /root/.ssh/config
@@ -110,13 +106,6 @@ RUN echo "Port 2122" >> /etc/ssh/sshd_config
 
 CMD ["/etc/bootstrap.sh", "-d"]
 
-# Hdfs ports
-#EXPOSE 50010 50020 50070 50075 50090 8020 9000 
-# Mapred ports
-#EXPOSE 19888
-#Yarn ports
-#EXPOSE 8030 8031 8032 8033 8040 8042 8088
-#Other ports
-#EXPOSE 49707 2122
-#Kylin ports
-EXPOSE 7070 7443
+# Kylin and Other ports
+EXPOSE 7070 7443 49707 2122
+
