@@ -1,9 +1,9 @@
 #!/bin/bash
 
 : ${HADOOP_PREFIX:=/usr/local/hadoop}
+: ${KYLIN_HOME:=/usr/local/kylin}
 
 $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
-export KYLIN_HOME=/usr/local/kylin
 
 rm /tmp/*.pid
 
