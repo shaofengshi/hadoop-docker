@@ -45,7 +45,7 @@ ENV KYLIN_HOME /usr/local/kylin
 #ENV PATH $PATH:$KYLIN_HOME/bin
 
 # fixing the libhadoop.so like a boss
-RUN mkdir -p /usr/local/hadoop/lib/native/ && rm /usr/local/hadoop/lib/native/*
+RUN mkdir -p /usr/local/hadoop/lib/native/
 RUN curl -Ls http://dl.bintray.com/sequenceiq/sequenceiq-bin/hadoop-native-64-2.6.0.tar | tar -x -C /usr/local/hadoop/lib/native/
 
 ADD ssh_config /root/.ssh/config
