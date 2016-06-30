@@ -1,4 +1,4 @@
-# Creates a kylin 1.5.2 + hbase 0.98 + hive 1.2.1 + hadoop 2.7
+# Creates a kylin 1.5.2 + hbase 0.98 + hive 0.14 + hadoop 2.7
 
 FROM sequenceiq/pam:centos-6.5
 MAINTAINER Kyligence
@@ -40,9 +40,9 @@ RUN cd /usr/local && ln -s ./hadoop-2.7.1 hadoop
 RUN curl -s https://www-us.apache.org/dist/hbase/0.98.20/hbase-0.98.20-hadoop2-bin.tar.gz | tar -xz -C /usr/local/
 RUN cd /usr/local && ln -s ./hbase-0.98.20-hadoop2 hbase
 
-# hive 1.2.1
-RUN curl -s https://www-us.apache.org/dist/hive/hive-1.2.1/apache-hive-1.2.1-bin.tar.gz | tar -xz -C /usr/local/
-RUN cd /usr/local && ln -s ./apache-hive-1.2.1-bin hive
+# hive 0.14
+RUN curl -s https://archive.apache.org/dist/hive/hive-0.14.0/apache-hive-0.14.0-bin.tar.gz | tar -xz -C /usr/local/
+RUN cd /usr/local && ln -s ./apache-hive-0.14.0-bin hive
 # remove old jar to avoid conflict
 RUN rm -rf /usr/local/hadoop/share/hadoop/yarn/lib/jline-0.9.94.jar
 
