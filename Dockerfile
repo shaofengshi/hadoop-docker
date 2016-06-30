@@ -1,10 +1,14 @@
-# Creates a kylin 1.5.2 + hbase 0.98 + hive 0.14 + hadoop 2.6
+# Creates a kylin 1.5.2 + HDP 2.2 image
 
 FROM sequenceiq/pam:centos-6.5
-MAINTAINER Kyligence
+MAINTAINER Kyligence Inc
 
 USER root
 
+ADD HDP.repo /etc/yum.repos.d/HDP.repo
+ADD HDP-UTILS.repo /etc/yum.repos.d/HDP-UTILS.repo
+
+RUN rpm -iUvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 # install dev tools
 RUN yum clean all; \
     rpm --rebuilddb; \
@@ -19,85 +23,59 @@ RUN ssh-keygen -q -N "" -t rsa -f /root/.ssh/id_rsa
 RUN cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 
 
+# hadoop, hive, hbase
+RUN yum install -y hbase tez hadoop snappy snappy-devel hadoop-libhdfs ambari-log4j hive hive-hcatalog hive-webhcat webhcat-tar-hive webhcat-tar-pig mysql-connector-java mysql-server
+
 # java
-RUN curl -LO 'http://download.oracle.com/otn-pub/java/jdk/7u71-b14/jdk-7u71-linux-x64.rpm' -H 'Cookie: oraclelicense=accept-securebackup-cookie'
-RUN rpm -i jdk-7u71-linux-x64.rpm
-RUN rm jdk-7u71-linux-x64.rpm
+#RUN curl -LO 'http://download.oracle.com/otn-pub/java/jdk/7u71-b14/jdk-7u71-linux-x64.rpm' -H 'Cookie: oraclelicense=accept-securebackup-cookie'
+#RUN rpm -i jdk-7u71-linux-x64.rpm
+#RUN rm jdk-7u71-linux-x64.rpm
 
-ENV JAVA_HOME /usr/java/default
-ENV PATH $PATH:$JAVA_HOME/bin
-RUN rm /usr/bin/java && ln -s $JAVA_HOME/bin/java /usr/bin/java
-
-# hadoop
-RUN curl -s http://www.eu.apache.org/dist/hadoop/common/hadoop-2.6.0/hadoop-2.6.0.tar.gz | tar -xz -C /usr/local/
-RUN cd /usr/local && ln -s ./hadoop-2.6.0 hadoop
-
-# hbase 0.98
-RUN curl -s https://www-us.apache.org/dist/hbase/0.98.20/hbase-0.98.20-hadoop2-bin.tar.gz | tar -xz -C /usr/local/
-RUN cd /usr/local && ln -s ./hbase-0.98.20-hadoop2 hbase
-
-# hive 0.14
-RUN curl -s https://archive.apache.org/dist/hive/hive-0.14.0/apache-hive-0.14.0-bin.tar.gz | tar -xz -C /usr/local/
-RUN cd /usr/local && ln -s ./apache-hive-0.14.0-bin hive
-# remove old jar to avoid conflict
-RUN rm -rf /usr/local/hadoop/share/hadoop/yarn/lib/jline-0.9.94.jar
+#ENV JAVA_HOME /usr/java/default
+#ENV PATH $PATH:$JAVA_HOME/bin
+#RUN rm /usr/bin/java && ln -s $JAVA_HOME/bin/java /usr/bin/java
 
 # kylin 1.5.2
 RUN curl -s https://www-us.apache.org/dist/kylin/apache-kylin-1.5.2.1/apache-kylin-1.5.2.1-bin.tar.gz | tar -xz -C /usr/local/
 RUN cd /usr/local && ln -s ./apache-kylin-1.5.2.1-bin kylin
 
-ENV HADOOP_PREFIX /usr/local/hadoop
-ENV HADOOP_COMMON_HOME /usr/local/hadoop
-ENV HADOOP_HDFS_HOME /usr/local/hadoop
-ENV HADOOP_MAPRED_HOME /usr/local/hadoop
-ENV HADOOP_YARN_HOME /usr/local/hadoop
-ENV HADOOP_CONF_DIR /usr/local/hadoop/etc/hadoop
-ENV YARN_CONF_DIR $HADOOP_PREFIX/etc/hadoop
 
-ENV HBASE_PREFIX /usr/local/hbase
-ENV HBASE_CONF_DIR $HBASE_PREFIX/conf
-ENV HIVE_PREFIX /usr/local/hive
-ENV HIVE_CONF_DIR $HIVE_PREFIX/conf
+ENV HADOOP_PREFIX /usr/local/hadoop-2.6.0
+ENV HADOOP_CONF_DIR $HADOOP_PREFIX/etc/hadoop
+
+ENV HBASE_CONF_DIR /etc/hbase/conf
+ENV HIVE_CONF_DIR /etc/hive/conf
 ENV KYLIN_HOME /usr/local/kylin
 
 ENV PATH $PATH:$HADOOP_PREFIX/bin:$HBASE_PREFIX/bin:$HIVE_PREFIX/bin:$KYLIN_HOME/bin
 
-RUN sed -i '/^export JAVA_HOME/ s:.*:export JAVA_HOME=/usr/java/default\nexport HADOOP_PREFIX=/usr/local/hadoop\nexport HADOOP_HOME=/usr/local/hadoop\n:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
-RUN sed -i '/^export HADOOP_CONF_DIR/ s:.*:export HADOOP_CONF_DIR=/usr/local/hadoop/etc/hadoop/:' $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
-#RUN . $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
 
-RUN mkdir $HADOOP_PREFIX/input
-RUN cp $HADOOP_PREFIX/etc/hadoop/*.xml $HADOOP_PREFIX/input
-
-# pseudo distributed
-#ADD core-site.xml.template $HADOOP_PREFIX/etc/hadoop/core-site.xml.template
-#RUN sed s/HOSTNAME/localhost/ /usr/local/hadoop/etc/hadoop/core-site.xml.template > /usr/local/hadoop/etc/hadoop/core-site.xml
-ADD core-site.xml $HADOOP_PREFIX/etc/hadoop/core-site.xml
-ADD hdfs-site.xml $HADOOP_PREFIX/etc/hadoop/hdfs-site.xml
-ADD mapred-site.xml $HADOOP_PREFIX/etc/hadoop/mapred-site.xml
-ADD yarn-site.xml $HADOOP_PREFIX/etc/hadoop/yarn-site.xml
+# Add configuration files
+ADD core-site.xml $HADOOP_CONF_DIR/core-site.xml
+ADD hdfs-site.xml $HADOOP_CONF_DIR/hdfs-site.xml
+ADD mapred-site.xml $HADOOP_CONF_DIR/mapred-site.xml
+ADD yarn-site.xml $HADOOP_CONF_DIR/yarn-site.xml
 ADD hbase-site.xml $HBASE_CONF_DIR/hbase-site.xml
 ADD hive-site.xml $HIVE_CONF_DIR/hive-site.xml
 ADD kylin.properties $KYLIN_HOME/conf/kylin.properties
 
 # fixing the libhadoop.so like a boss
-RUN rm  /usr/local/hadoop/lib/native/*
-RUN curl -Ls http://dl.bintray.com/sequenceiq/sequenceiq-bin/hadoop-native-64-2.6.0.tar | tar -x -C /usr/local/hadoop/lib/native/
+#RUN rm  /usr/local/hadoop/lib/native/*
+#RUN curl -Ls http://dl.bintray.com/sequenceiq/sequenceiq-bin/hadoop-native-64-2.6.0.tar | tar -x -C /usr/local/hadoop/lib/native/
 
 ADD ssh_config /root/.ssh/config
 RUN chmod 600 /root/.ssh/config
 RUN chown root:root /root/.ssh/config
 
 ADD bootstrap.sh /etc/bootstrap.sh
-RUN chown root:root /etc/bootstrap.sh
-RUN chmod 700 /etc/bootstrap.sh
+RUN chown root:root /etc/bootstrap.sh && chmod 700 /etc/bootstrap.sh
 
 ENV BOOTSTRAP /etc/bootstrap.sh
 
 # workingaround docker.io build error
-RUN ls -la /usr/local/hadoop/etc/hadoop/*-env.sh
-RUN chmod +x /usr/local/hadoop/etc/hadoop/*-env.sh
-RUN ls -la /usr/local/hadoop/etc/hadoop/*-env.sh
+#RUN ls -la /usr/local/hadoop/etc/hadoop/*-env.sh
+#RUN chmod +x /usr/local/hadoop/etc/hadoop/*-env.sh
+#RUN ls -la /usr/local/hadoop/etc/hadoop/*-env.sh
 
 # fix the 254 error code
 RUN sed  -i "/^[^#]*UsePAM/ s/.*/#&/"  /etc/ssh/sshd_config
