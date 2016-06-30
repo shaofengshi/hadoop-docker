@@ -25,47 +25,31 @@ RUN cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 
 # hadoop, hive, hbase
 RUN yum install -y hbase tez hadoop snappy snappy-devel hadoop-libhdfs ambari-log4j hive hive-hcatalog hive-webhcat webhcat-tar-hive webhcat-tar-pig mysql-connector-java mysql-server
+RUM yum -y remove java*
 
 # java
-#RUN curl -LO 'http://download.oracle.com/otn-pub/java/jdk/7u71-b14/jdk-7u71-linux-x64.rpm' -H 'Cookie: oraclelicense=accept-securebackup-cookie'
-#RUN rpm -i jdk-7u71-linux-x64.rpm
-#RUN rm jdk-7u71-linux-x64.rpm
+RUN curl -LO 'http://download.oracle.com/otn-pub/java/jdk/7u71-b14/jdk-7u71-linux-x64.rpm' -H 'Cookie: oraclelicense=accept-securebackup-cookie'
+RUN rpm -i jdk-7u71-linux-x64.rpm
+RUN rm jdk-7u71-linux-x64.rpm
 
-#ENV JAVA_HOME /usr/java/default
-#ENV PATH $PATH:$JAVA_HOME/bin
-#RUN rm /usr/bin/java && ln -s $JAVA_HOME/bin/java /usr/bin/java
+ENV JAVA_HOME /usr/java/default
+ENV PATH $PATH:$JAVA_HOME/bin
+RUN rm /usr/bin/java && ln -s $JAVA_HOME/bin/java /usr/bin/java
 
 # kylin 1.5.2
 RUN curl -s https://www-us.apache.org/dist/kylin/apache-kylin-1.5.2.1/apache-kylin-1.5.2.1-bin.tar.gz | tar -xz -C /usr/local/
 RUN cd /usr/local && ln -s ./apache-kylin-1.5.2.1-bin kylin
 
-
-ENV HADOOP_PREFIX /usr/local/hadoop-2.6.0
-ENV HADOOP_CONF_DIR $HADOOP_PREFIX/etc/hadoop
-
-ENV HBASE_CONF_DIR /etc/hbase/conf
-ENV HIVE_CONF_DIR /etc/hive/conf
 ENV KYLIN_HOME /usr/local/kylin
 
-ENV PATH $PATH:$HADOOP_PREFIX/bin:$HBASE_PREFIX/bin:$HIVE_PREFIX/bin:$KYLIN_HOME/bin
-
-
-# Add configuration files
-ADD core-site.xml $HADOOP_CONF_DIR/core-site.xml
-ADD hdfs-site.xml $HADOOP_CONF_DIR/hdfs-site.xml
-ADD mapred-site.xml $HADOOP_CONF_DIR/mapred-site.xml
-ADD yarn-site.xml $HADOOP_CONF_DIR/yarn-site.xml
-ADD hbase-site.xml $HBASE_CONF_DIR/hbase-site.xml
-ADD hive-site.xml $HIVE_CONF_DIR/hive-site.xml
-ADD kylin.properties $KYLIN_HOME/conf/kylin.properties
+#ENV PATH $PATH:$KYLIN_HOME/bin
 
 # fixing the libhadoop.so like a boss
-#RUN rm  /usr/local/hadoop/lib/native/*
-#RUN curl -Ls http://dl.bintray.com/sequenceiq/sequenceiq-bin/hadoop-native-64-2.6.0.tar | tar -x -C /usr/local/hadoop/lib/native/
+RUN mkdir -p /usr/local/hadoop/lib/native/ && rm /usr/local/hadoop/lib/native/*
+RUN curl -Ls http://dl.bintray.com/sequenceiq/sequenceiq-bin/hadoop-native-64-2.6.0.tar | tar -x -C /usr/local/hadoop/lib/native/
 
 ADD ssh_config /root/.ssh/config
-RUN chmod 600 /root/.ssh/config
-RUN chown root:root /root/.ssh/config
+RUN chmod 600 /root/.ssh/config && chown root:root /root/.ssh/config
 
 ADD bootstrap.sh /etc/bootstrap.sh
 RUN chown root:root /etc/bootstrap.sh && chmod 700 /etc/bootstrap.sh
@@ -84,6 +68,22 @@ RUN echo "Port 2122" >> /etc/ssh/sshd_config
 
 CMD ["/etc/bootstrap.sh", "-d"]
 
+ENV JAVA_LIBRARY_PATH /usr/hdp/current/hadoop/lib/native:$JAVA_LIBRARY_PATH
+
 # Kylin and Other ports
 EXPOSE 7070 7443 49707 2122
 
+ENV HADOOP_CONF_DIR /etc/hadoop/conf
+ENV HBASE_CONF_DIR /etc/hbase/conf
+ENV HIVE_CONF_DIR /etc/hive/conf
+
+# Add configuration files
+ADD core-site.xml $HADOOP_CONF_DIR/core-site.xml
+ADD hdfs-site.xml $HADOOP_CONF_DIR/hdfs-site.xml
+ADD mapred-site.xml $HADOOP_CONF_DIR/mapred-site.xml
+ADD yarn-site.xml $HADOOP_CONF_DIR/yarn-site.xml
+ADD hbase-site.xml $HBASE_CONF_DIR/hbase-site.xml
+ADD hdfs-site.xml $HBASE_CONF_DIR/hdfs-site.xml
+ADD hive-site.xml $HIVE_CONF_DIR/hive-site.xml
+ADD mapred-site.xml $HIVE_CONF_DIR/mapred-site.xml
+ADD kylin.properties $KYLIN_HOME/conf/kylin.properties
